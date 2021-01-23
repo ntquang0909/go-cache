@@ -8,5 +8,4 @@ require (
 	github.com/json-iterator/go v1.1.10
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/stretchr/testify v1.6.1
-	gopkg.in/redis.v5 v5.2.9
 )
