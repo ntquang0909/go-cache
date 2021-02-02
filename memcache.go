@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"github.com/bradfitz/gomemcache/memcache"
-
-	jsoniter "github.com/json-iterator/go"
 )
 
 // MemcacheStore client
@@ -53,7 +51,7 @@ func (c *MemcacheStore) Get(key string, value interface{}) error {
 		return err
 	}
 
-	err = jsoniter.Unmarshal(val.Value, value)
+	err = decode(val.Value, value)
 	if err != nil {
 		fmt.Println("cache: Data: ", string(val.Value))
 		fmt.Println("cache: Expected: ", value)
@@ -68,7 +66,7 @@ func (c *MemcacheStore) Set(key string, value interface{}, expiration ...time.Du
 		return ErrMustBePointer
 	}
 
-	cacheEntry, err := jsoniter.Marshal(value)
+	cacheEntry, err := encode(value)
 	if err != nil {
 		fmt.Println("cache: Data: ", value)
 		return ErrMarshal

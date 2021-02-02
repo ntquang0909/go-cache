@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
-	jsoniter "github.com/json-iterator/go"
 )
 
 // RedisStore client
@@ -139,7 +138,7 @@ func (c *RedisStore) Get(key string, value interface{}) error {
 		return err
 	}
 
-	err = jsoniter.Unmarshal([]byte(val), value)
+	err = decode([]byte(val), value)
 	if err != nil {
 		return ErrUnmarshal
 	}
@@ -152,7 +151,7 @@ func (c *RedisStore) Set(key string, value interface{}, expiration ...time.Durat
 		return ErrMustBePointer
 	}
 
-	cacheEntry, err := jsoniter.Marshal(value)
+	cacheEntry, err := encode(value)
 	if err != nil {
 		return ErrMarshal
 	}
