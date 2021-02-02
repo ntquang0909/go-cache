@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/bradfitz/gomemcache/memcache"
@@ -54,6 +55,8 @@ func (c *MemcacheStore) Get(key string, value interface{}) error {
 
 	err = jsoniter.Unmarshal(val.Value, value)
 	if err != nil {
+		fmt.Println("cache: Data: ", string(val.Value))
+		fmt.Println("cache: Expected: ", value)
 		return ErrUnmarshal
 	}
 	return nil
@@ -67,6 +70,7 @@ func (c *MemcacheStore) Set(key string, value interface{}, expiration ...time.Du
 
 	cacheEntry, err := jsoniter.Marshal(value)
 	if err != nil {
+		fmt.Println("cache: Data: ", value)
 		return ErrMarshal
 	}
 	var exp = c.DefaultExpiration
