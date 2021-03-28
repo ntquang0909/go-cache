@@ -7,7 +7,7 @@ import (
 )
 
 func TestChain(t *testing.T) {
-	var chain = NewChain(
+	var chain Cache = NewChain(
 		NewMemoryStore(MemoryStoreOptions{}),
 		NewMemcacheStore(&MemcacheStoreOptions{
 			Servers: []string{"localhost:11211"},

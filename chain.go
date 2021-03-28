@@ -69,3 +69,7 @@ func (c *Chain) Delete(key string) error {
 
 	return nil
 }
+
+func (c *Chain) Type() string {
+	return "chain"
+}
