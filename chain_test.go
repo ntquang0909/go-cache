@@ -9,6 +9,7 @@ import (
 func TestChain(t *testing.T) {
 	var chain Cache = NewChain(
 		NewMemoryStore(MemoryStoreOptions{}),
+		NewRistrettoStore(RistrettoStoreOptionsDefault),
 		NewMemcacheStore(&MemcacheStoreOptions{
 			Servers: []string{"localhost:11211"},
 		}),
