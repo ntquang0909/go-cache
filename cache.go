@@ -18,6 +18,7 @@ var (
 	ErrMarshal                = errors.New("cache: Marshal error")
 	ErrMustBePointer          = errors.New("cache: Must be a pointer")
 	ErrMemcacheServerRequired = errors.New("cache: Memcache must have a valid server")
+	ErrRistrettoWrite         = errors.New("cache: Ristretto write error")
 )
 
 // Cache interface
@@ -27,6 +28,8 @@ type Cache interface {
 	Set(key string, value interface{}, expire ...time.Duration) error
 
 	Delete(key string) error
+
+	Type() string
 }
 
 // ToPtr wraps the given value with pointer: V => *V, *V => **V, etc.

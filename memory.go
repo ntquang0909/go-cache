@@ -7,20 +7,22 @@ import (
 	"github.com/patrickmn/go-cache"
 )
 
-// MemoryStore memory cache
 type MemoryStore struct {
 	client            *cache.Cache
 	DefaultExpiration time.Duration
 }
 
-// MemoryStoreOptions options
 type MemoryStoreOptions struct {
 	DefaultExpiration time.Duration
 	DefaultCacheItems map[string]cache.Item
 	CleanupInterval   time.Duration
 }
 
-// NewMemoryStore init
+var MemoryStoreOptionsDefault = &MemoryStoreOptions{
+	DefaultExpiration: time.Hour * 24,
+	CleanupInterval:   time.Hour * 26,
+}
+
 func NewMemoryStore(options MemoryStoreOptions) *MemoryStore {
 	var items = make(map[string]cache.Item)
 	if options.DefaultCacheItems != nil {
@@ -34,7 +36,6 @@ func NewMemoryStore(options MemoryStoreOptions) *MemoryStore {
 	}
 }
 
-// Get value by given key
 func (c *MemoryStore) Get(key string, value interface{}) error {
 	if !isPtr(value) {
 		return ErrMustBePointer
@@ -61,7 +62,6 @@ func (c *MemoryStore) Get(key string, value interface{}) error {
 	return nil
 }
 
-// Set value by give key
 func (c *MemoryStore) Set(key string, value interface{}, expiration ...time.Duration) error {
 	if !isPtr(value) {
 		return ErrMustBePointer
@@ -76,8 +76,11 @@ func (c *MemoryStore) Set(key string, value interface{}, expiration ...time.Dura
 	return nil
 }
 
-// Delete by give key
 func (c *MemoryStore) Delete(key string) error {
 	c.client.Delete(key)
 	return nil
+}
+
+func (c *MemoryStore) Type() string {
+	return "memory"
 }

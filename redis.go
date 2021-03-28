@@ -64,7 +64,6 @@ type RedisStoreOptions struct {
 	IdleCheckFrequency time.Duration
 }
 
-// NewRedisStore init
 func NewRedisStore(options *RedisStoreOptions) *RedisStore {
 	var opt = &redis.Options{
 		Addr:     options.Address,
@@ -123,7 +122,6 @@ func NewRedisStore(options *RedisStoreOptions) *RedisStore {
 	}
 }
 
-// Get value by given key
 func (c *RedisStore) Get(key string, value interface{}) error {
 	if !isPtr(value) {
 		return ErrMustBePointer
@@ -145,7 +143,6 @@ func (c *RedisStore) Get(key string, value interface{}) error {
 	return nil
 }
 
-// Set value by give key
 func (c *RedisStore) Set(key string, value interface{}, expiration ...time.Duration) error {
 	if !isPtr(value) {
 		return ErrMustBePointer
@@ -167,11 +164,14 @@ func (c *RedisStore) Set(key string, value interface{}, expiration ...time.Durat
 	return nil
 }
 
-// Delete by give key
 func (c *RedisStore) Delete(key string) error {
 	var err = c.client.Del(context.TODO(), key).Err()
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (c *RedisStore) Type() string {
+	return "redis"
 }

@@ -7,13 +7,11 @@ import (
 	"github.com/bradfitz/gomemcache/memcache"
 )
 
-// MemcacheStore client
 type MemcacheStore struct {
 	client            *memcache.Client
 	DefaultExpiration time.Duration
 }
 
-// MemcacheStoreOptions options
 type MemcacheStoreOptions struct {
 	Servers           []string
 	DefaultExpiration time.Duration
@@ -21,7 +19,6 @@ type MemcacheStoreOptions struct {
 	Timeout           time.Duration
 }
 
-// NewMemcacheStore init
 func NewMemcacheStore(options *MemcacheStoreOptions) *MemcacheStore {
 	if len(options.Servers) == 0 {
 		panic(ErrMemcacheServerRequired)
@@ -40,7 +37,6 @@ func NewMemcacheStore(options *MemcacheStoreOptions) *MemcacheStore {
 	}
 }
 
-// Get value by given key
 func (c *MemcacheStore) Get(key string, value interface{}) error {
 	if !isPtr(value) {
 		return ErrMustBePointer
@@ -60,7 +56,6 @@ func (c *MemcacheStore) Get(key string, value interface{}) error {
 	return nil
 }
 
-// Set value by give key
 func (c *MemcacheStore) Set(key string, value interface{}, expiration ...time.Duration) error {
 	if !isPtr(value) {
 		return ErrMustBePointer
@@ -88,11 +83,14 @@ func (c *MemcacheStore) Set(key string, value interface{}, expiration ...time.Du
 	return nil
 }
 
-// Delete by give key
 func (c *MemcacheStore) Delete(key string) error {
 	var err = c.client.Delete(key)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func (c *MemcacheStore) Type() string {
+	return "memcache"
 }
