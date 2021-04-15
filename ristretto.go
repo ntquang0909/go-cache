@@ -11,6 +11,7 @@ type RistrettoStore struct {
 	client            *ristretto.Cache
 	cost              int64
 	DefaultExpiration time.Duration
+	logger            Logger
 }
 
 type RistrettoStoreOptions struct {
@@ -18,6 +19,7 @@ type RistrettoStoreOptions struct {
 	MaxCost     int64
 	BufferItems int64
 	DefaultCost int64
+	Logger      Logger
 }
 
 var RistrettoStoreOptionsDefault = &RistrettoStoreOptions{
@@ -40,6 +42,7 @@ func NewRistrettoStore(options *RistrettoStoreOptions) *RistrettoStore {
 	return &RistrettoStore{
 		client: client,
 		cost:   options.DefaultCost,
+		logger: options.Logger,
 	}
 }
 
@@ -50,6 +53,7 @@ func (c *RistrettoStore) Get(key string, value interface{}) error {
 
 	val, found := c.client.Get(key)
 	if !found {
+		c.Logger().Printf("%s: Get key = %s error %v\n", c.Type(), key, ErrKeyNotFound)
 		return ErrKeyNotFound
 	}
 
@@ -76,6 +80,7 @@ func (c *RistrettoStore) Set(key string, value interface{}, expiration ...time.D
 
 	var success = c.client.Set(key, value, c.getCost())
 	if !success {
+		c.Logger().Printf("%s: Set key = %s value = %v error %v\n", c.Type(), key, value, ErrRistrettoWrite)
 		return ErrRistrettoWrite
 	}
 	return nil
@@ -97,4 +102,11 @@ func (c *RistrettoStore) getCost() int64 {
 	}
 
 	return 8
+}
+
+func (c *RistrettoStore) Logger() Logger {
+	if c.logger != nil {
+		return c.logger
+	}
+	return DefaultLogger
 }

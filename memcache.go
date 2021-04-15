@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/bradfitz/gomemcache/memcache"
@@ -10,6 +9,7 @@ import (
 type MemcacheStore struct {
 	client            *memcache.Client
 	DefaultExpiration time.Duration
+	logger            Logger
 }
 
 type MemcacheStoreOptions struct {
@@ -17,6 +17,7 @@ type MemcacheStoreOptions struct {
 	DefaultExpiration time.Duration
 	MaxIdleConns      int
 	Timeout           time.Duration
+	Logger            Logger
 }
 
 func NewMemcacheStore(options *MemcacheStoreOptions) *MemcacheStore {
@@ -33,6 +34,7 @@ func NewMemcacheStore(options *MemcacheStoreOptions) *MemcacheStore {
 	}
 	return &MemcacheStore{
 		client:            client,
+		logger:            options.Logger,
 		DefaultExpiration: options.DefaultExpiration,
 	}
 }
@@ -49,8 +51,7 @@ func (c *MemcacheStore) Get(key string, value interface{}) error {
 
 	err = decode(val.Value, value)
 	if err != nil {
-		fmt.Println("cache: Data: ", string(val.Value))
-		fmt.Println("cache: Expected: ", value)
+		c.Logger().Printf("%s: Get key = %s error %v\n", c.Type(), key, err)
 		return ErrUnmarshal
 	}
 	return nil
@@ -63,7 +64,7 @@ func (c *MemcacheStore) Set(key string, value interface{}, expiration ...time.Du
 
 	cacheEntry, err := encode(value)
 	if err != nil {
-		fmt.Println("cache: Data: ", value)
+		c.Logger().Printf("%s: Set key = %s value = %v error %v\n", c.Type(), key, value, err)
 		return ErrMarshal
 	}
 	var exp = c.DefaultExpiration
@@ -78,6 +79,7 @@ func (c *MemcacheStore) Set(key string, value interface{}, expiration ...time.Du
 	}
 	err = c.client.Set(&item)
 	if err != nil {
+		c.Logger().Printf("%s: Set key = %s value = %v error %v\n", c.Type(), key, value, err)
 		return err
 	}
 	return nil
@@ -86,6 +88,7 @@ func (c *MemcacheStore) Set(key string, value interface{}, expiration ...time.Du
 func (c *MemcacheStore) Delete(key string) error {
 	var err = c.client.Delete(key)
 	if err != nil {
+		c.Logger().Printf("%s: Delete key = %s error %v\n", c.Type(), key, err)
 		return err
 	}
 	return nil
@@ -93,4 +96,11 @@ func (c *MemcacheStore) Delete(key string) error {
 
 func (c *MemcacheStore) Type() string {
 	return "memcache"
+}
+
+func (c *MemcacheStore) Logger() Logger {
+	if c.logger != nil {
+		return c.logger
+	}
+	return DefaultLogger
 }

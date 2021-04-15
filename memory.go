@@ -10,12 +10,14 @@ import (
 type MemoryStore struct {
 	client            *cache.Cache
 	DefaultExpiration time.Duration
+	logger            Logger
 }
 
 type MemoryStoreOptions struct {
 	DefaultExpiration time.Duration
 	DefaultCacheItems map[string]cache.Item
 	CleanupInterval   time.Duration
+	Logger            Logger
 }
 
 var MemoryStoreOptionsDefault = &MemoryStoreOptions{
@@ -33,6 +35,7 @@ func NewMemoryStore(options MemoryStoreOptions) *MemoryStore {
 	return &MemoryStore{
 		client:            client,
 		DefaultExpiration: options.DefaultExpiration,
+		logger:            options.Logger,
 	}
 }
 
@@ -43,6 +46,7 @@ func (c *MemoryStore) Get(key string, value interface{}) error {
 
 	val, found := c.client.Get(key)
 	if !found {
+		c.Logger().Printf("%s: Get key = %s error %v\n", c.Type(), key, ErrKeyNotFound)
 		return ErrKeyNotFound
 	}
 
@@ -83,4 +87,11 @@ func (c *MemoryStore) Delete(key string) error {
 
 func (c *MemoryStore) Type() string {
 	return "memory"
+}
+
+func (c *MemoryStore) Logger() Logger {
+	if c.logger != nil {
+		return c.logger
+	}
+	return DefaultLogger
 }

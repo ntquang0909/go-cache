@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"fmt"
 	"sync"
 	"time"
 )
@@ -24,7 +23,7 @@ func (c *Chain) Get(key string, value interface{}) error {
 		if err == nil {
 			return nil
 		}
-		fmt.Printf("%s: Get cache error %v\n", cache.Type(), err)
+		c.Logger().Printf("%s: Get cache error %v\n", cache.Type(), err)
 	}
 
 	return ErrKeyNotFound
@@ -41,7 +40,7 @@ func (c *Chain) Set(key string, value interface{}, expiration ...time.Duration) 
 
 			var err = cache.Set(key, value, expiration...)
 			if err != nil {
-				fmt.Printf("%s: Set cache key = %s error %v\n", cache.Type(), key, err)
+				c.Logger().Printf("%s: Set cache key = %s error %v\n", cache.Type(), key, err)
 			}
 		}(&wg, cache)
 	}
@@ -61,7 +60,7 @@ func (c *Chain) Delete(key string) error {
 
 			var err = cache.Delete(key)
 			if err != nil {
-				fmt.Printf("%s: Delete cache key = %s error %v\n", cache.Type(), key, err)
+				c.Logger().Printf("%s: Delete cache key = %s error %v\n", cache.Type(), key, err)
 			}
 		}(&wg, cache)
 	}
@@ -72,4 +71,8 @@ func (c *Chain) Delete(key string) error {
 
 func (c *Chain) Type() string {
 	return "chain"
+}
+
+func (c *Chain) Logger() Logger {
+	return DefaultLogger
 }

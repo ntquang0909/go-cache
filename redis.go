@@ -11,6 +11,7 @@ import (
 type RedisStore struct {
 	client            *redis.Client
 	DefaultExpiration time.Duration
+	logger            Logger
 }
 
 // RedisStoreOptions options
@@ -62,6 +63,8 @@ type RedisStoreOptions struct {
 	// but idle connections are still discarded by the client
 	// if IdleTimeout is set.
 	IdleCheckFrequency time.Duration
+
+	Logger Logger
 }
 
 func NewRedisStore(options *RedisStoreOptions) *RedisStore {
@@ -119,6 +122,7 @@ func NewRedisStore(options *RedisStoreOptions) *RedisStore {
 	return &RedisStore{
 		client:            client,
 		DefaultExpiration: options.DefaultExpiration,
+		logger:            options.Logger,
 	}
 }
 
@@ -130,6 +134,7 @@ func (c *RedisStore) Get(key string, value interface{}) error {
 	val, err := c.client.Get(context.TODO(), key).Result()
 
 	if err != nil {
+		c.Logger().Printf("%s: Get key = %s error %v\n", c.Type(), key, ErrRistrettoWrite)
 		if err == redis.Nil {
 			return ErrKeyNotFound
 		}
@@ -145,6 +150,7 @@ func (c *RedisStore) Get(key string, value interface{}) error {
 
 func (c *RedisStore) Set(key string, value interface{}, expiration ...time.Duration) error {
 	if !isPtr(value) {
+		c.Logger().Printf("%s: Set key = %s value = %v error %v\n", c.Type(), key, value, ErrMustBePointer)
 		return ErrMustBePointer
 	}
 
@@ -159,6 +165,7 @@ func (c *RedisStore) Set(key string, value interface{}, expiration ...time.Durat
 
 	err = c.client.Set(context.TODO(), key, cacheEntry, exp).Err()
 	if err != nil {
+		c.Logger().Printf("%s: Set key = %s value = %v error %v\n", c.Type(), key, value, err)
 		return err
 	}
 	return nil
@@ -167,6 +174,7 @@ func (c *RedisStore) Set(key string, value interface{}, expiration ...time.Durat
 func (c *RedisStore) Delete(key string) error {
 	var err = c.client.Del(context.TODO(), key).Err()
 	if err != nil {
+		c.Logger().Printf("%s: Delete key = %s value = %v error %v\n", c.Type(), key, err)
 		return err
 	}
 	return nil
@@ -174,4 +182,11 @@ func (c *RedisStore) Delete(key string) error {
 
 func (c *RedisStore) Type() string {
 	return "redis"
+}
+
+func (c *RedisStore) Logger() Logger {
+	if c.logger != nil {
+		return c.logger
+	}
+	return DefaultLogger
 }

@@ -8,6 +8,11 @@ import (
 
 func TestChain(t *testing.T) {
 	var chain Cache = NewChain(
+		NewMongoDBStore(MongoDBStoreOptions{
+			DatabaseURI:  "mongodb://localhost:27017",
+			DatabaseName: "test_cache",
+			Entity:       "caches",
+		}),
 		NewMemoryStore(MemoryStoreOptions{}),
 		NewRistrettoStore(RistrettoStoreOptionsDefault),
 		NewMemcacheStore(&MemcacheStoreOptions{
