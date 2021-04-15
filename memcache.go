@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"reflect"
 	"time"
 
 	"github.com/bradfitz/gomemcache/memcache"
@@ -41,6 +42,7 @@ func NewMemcacheStore(options *MemcacheStoreOptions) *MemcacheStore {
 
 func (c *MemcacheStore) Get(key string, value interface{}) error {
 	if !isPtr(value) {
+		c.Logger().Printf("%s: Get key = %s value = %v [ERROR] %v\n", c.Type(), key, value, ErrMustBePointer)
 		return ErrMustBePointer
 	}
 
@@ -51,20 +53,22 @@ func (c *MemcacheStore) Get(key string, value interface{}) error {
 
 	err = decode(val.Value, value)
 	if err != nil {
-		c.Logger().Printf("%s: Get key = %s error %v\n", c.Type(), key, err)
+		c.Logger().Printf("%s: Decode key = %s [ERROR] %v\n", c.Type(), key, err)
 		return ErrUnmarshal
 	}
 	return nil
 }
 
 func (c *MemcacheStore) Set(key string, value interface{}, expiration ...time.Duration) error {
-	if !isPtr(value) {
+	var v = reflect.ValueOf(value)
+	if v.Kind() != reflect.Ptr {
+		c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, value, ErrMustBePointer)
 		return ErrMustBePointer
 	}
 
 	cacheEntry, err := encode(value)
 	if err != nil {
-		c.Logger().Printf("%s: Set key = %s value = %v error %v\n", c.Type(), key, value, err)
+		c.Logger().Printf("%s: Encode key = %s value = %v [ERROR] %v\n", c.Type(), key, v.Interface(), err)
 		return ErrMarshal
 	}
 	var exp = c.DefaultExpiration
@@ -79,7 +83,7 @@ func (c *MemcacheStore) Set(key string, value interface{}, expiration ...time.Du
 	}
 	err = c.client.Set(&item)
 	if err != nil {
-		c.Logger().Printf("%s: Set key = %s value = %v error %v\n", c.Type(), key, value, err)
+		c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, v.Interface(), err)
 		return err
 	}
 	return nil
@@ -88,7 +92,7 @@ func (c *MemcacheStore) Set(key string, value interface{}, expiration ...time.Du
 func (c *MemcacheStore) Delete(key string) error {
 	var err = c.client.Delete(key)
 	if err != nil {
-		c.Logger().Printf("%s: Delete key = %s error %v\n", c.Type(), key, err)
+		c.Logger().Printf("%s: Delete key = %s [ERROR] %v\n", c.Type(), key, err)
 		return err
 	}
 	return nil

@@ -53,7 +53,7 @@ func (c *RistrettoStore) Get(key string, value interface{}) error {
 
 	val, found := c.client.Get(key)
 	if !found {
-		c.Logger().Printf("%s: Get key = %s error %v\n", c.Type(), key, ErrKeyNotFound)
+		c.Logger().Printf("%s: Get key = %s [ERROR] %v\n", c.Type(), key, ErrKeyNotFound)
 		return ErrKeyNotFound
 	}
 
@@ -74,13 +74,15 @@ func (c *RistrettoStore) Get(key string, value interface{}) error {
 }
 
 func (c *RistrettoStore) Set(key string, value interface{}, expiration ...time.Duration) error {
-	if !isPtr(value) {
+	var v = reflect.ValueOf(value)
+	if v.Kind() != reflect.Ptr {
+		c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, value, ErrMustBePointer)
 		return ErrMustBePointer
 	}
 
 	var success = c.client.Set(key, value, c.getCost())
 	if !success {
-		c.Logger().Printf("%s: Set key = %s value = %v error %v\n", c.Type(), key, value, ErrRistrettoWrite)
+		c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, v.Interface(), ErrRistrettoWrite)
 		return ErrRistrettoWrite
 	}
 	return nil

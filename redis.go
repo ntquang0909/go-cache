@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	"github.com/go-redis/redis/v8"
@@ -134,7 +135,7 @@ func (c *RedisStore) Get(key string, value interface{}) error {
 	val, err := c.client.Get(context.TODO(), key).Result()
 
 	if err != nil {
-		c.Logger().Printf("%s: Get key = %s error %v\n", c.Type(), key, ErrRistrettoWrite)
+		c.Logger().Printf("%s: Get key = %s error %v\n", c.Type(), key, err)
 		if err == redis.Nil {
 			return ErrKeyNotFound
 		}
@@ -143,19 +144,22 @@ func (c *RedisStore) Get(key string, value interface{}) error {
 
 	err = decode([]byte(val), value)
 	if err != nil {
+		c.Logger().Printf("%s: Decode key = %s error %v\n", c.Type(), key, err)
 		return ErrUnmarshal
 	}
 	return nil
 }
 
 func (c *RedisStore) Set(key string, value interface{}, expiration ...time.Duration) error {
-	if !isPtr(value) {
+	var v = reflect.ValueOf(value)
+	if v.Kind() != reflect.Ptr {
 		c.Logger().Printf("%s: Set key = %s value = %v error %v\n", c.Type(), key, value, ErrMustBePointer)
 		return ErrMustBePointer
 	}
 
 	cacheEntry, err := encode(value)
 	if err != nil {
+		c.Logger().Printf("%s: Encode key = %s value = %v error %v\n", c.Type(), key, v.Interface(), err)
 		return ErrMarshal
 	}
 	var exp = c.DefaultExpiration
@@ -165,7 +169,7 @@ func (c *RedisStore) Set(key string, value interface{}, expiration ...time.Durat
 
 	err = c.client.Set(context.TODO(), key, cacheEntry, exp).Err()
 	if err != nil {
-		c.Logger().Printf("%s: Set key = %s value = %v error %v\n", c.Type(), key, value, err)
+		c.Logger().Printf("%s: Set key = %s value = %v error %v\n", c.Type(), key, v.Interface(), err)
 		return err
 	}
 	return nil

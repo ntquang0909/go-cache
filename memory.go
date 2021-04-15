@@ -40,25 +40,22 @@ func NewMemoryStore(options MemoryStoreOptions) *MemoryStore {
 }
 
 func (c *MemoryStore) Get(key string, value interface{}) error {
-	if !isPtr(value) {
+	var o = reflect.ValueOf(value)
+	if o.Kind() != reflect.Ptr {
+		c.Logger().Printf("%s: Get key = %s value = %v [ERROR] %v\n", c.Type(), key, value, ErrMustBePointer)
 		return ErrMustBePointer
 	}
 
 	val, found := c.client.Get(key)
 	if !found {
-		c.Logger().Printf("%s: Get key = %s error %v\n", c.Type(), key, ErrKeyNotFound)
+		c.Logger().Printf("%s: Get key = %s [ERROR] %v\n", c.Type(), key, ErrKeyNotFound)
 		return ErrKeyNotFound
 	}
 
 	var i = reflect.ValueOf(val)
-	var o = reflect.ValueOf(value)
 
 	if i.Kind() != reflect.Ptr {
 		i = toPtr(i)
-	}
-
-	if o.Kind() != reflect.Ptr {
-		o = toPtr(o)
 	}
 
 	o.Elem().Set(i.Elem())
@@ -67,7 +64,9 @@ func (c *MemoryStore) Get(key string, value interface{}) error {
 }
 
 func (c *MemoryStore) Set(key string, value interface{}, expiration ...time.Duration) error {
-	if !isPtr(value) {
+	var v = reflect.ValueOf(value)
+	if v.Kind() != reflect.Ptr {
+		c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, value, ErrMustBePointer)
 		return ErrMustBePointer
 	}
 

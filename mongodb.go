@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	"github.com/patrickmn/go-cache"
@@ -66,6 +67,7 @@ func (c *MongoDBStore) getCollection() *mongo.Collection {
 
 func (c *MongoDBStore) Get(key string, value interface{}) error {
 	if !isPtr(value) {
+		c.Logger().Printf("%s: Get key = %s value = %v error %v\n", c.Type(), key, value, ErrMustBePointer)
 		return ErrMustBePointer
 	}
 
@@ -94,7 +96,9 @@ func (c *MongoDBStore) Get(key string, value interface{}) error {
 }
 
 func (c *MongoDBStore) Set(key string, value interface{}, expiration ...time.Duration) error {
-	if !isPtr(value) {
+	var v = reflect.ValueOf(value)
+	if v.Kind() != reflect.Ptr {
+		c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, value, ErrMustBePointer)
 		return ErrMustBePointer
 	}
 
@@ -105,7 +109,7 @@ func (c *MongoDBStore) Set(key string, value interface{}, expiration ...time.Dur
 
 	bytes, err := encode(value)
 	if err != nil {
-		c.Logger().Printf("%s: Encode key = %s value = %v [ERROR] %v\n", c.Type(), key, value, err)
+		c.Logger().Printf("%s: Encode key = %s value = %v [ERROR] %v\n", c.Type(), key, v.Interface(), err)
 		return err
 	}
 
@@ -125,14 +129,14 @@ func (c *MongoDBStore) Set(key string, value interface{}, expiration ...time.Dur
 	}
 	result, err := c.getCollection().UpdateOne(ctx, query, &update)
 	if err != nil {
-		c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, content, err)
+		c.Logger().Printf("%s: UpdateOne key = %s value = %v [ERROR] %v\n", c.Type(), key, content, err)
 		return err
 	}
 
 	if result.MatchedCount == 0 {
 		_, err := c.getCollection().InsertOne(ctx, &content)
 		if err != nil {
-			c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, content, err)
+			c.Logger().Printf("%s: InsertOne key = %s value = %v [ERROR] %v\n", c.Type(), key, content, err)
 			return err
 		}
 
@@ -145,7 +149,7 @@ func (c *MongoDBStore) Delete(key string) error {
 	var ctx = context.Background()
 	var query = bson.M{"_id": key}
 	if _, err := c.getCollection().DeleteOne(ctx, query); err != nil {
-		c.Logger().Printf("%s: Delete key = %s [ERROR] %v\n", c.Type(), key, err)
+		c.Logger().Printf("%s: DeleteOne key = %s [ERROR] %v\n", c.Type(), key, err)
 		return err
 	}
 	return nil

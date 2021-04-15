@@ -23,7 +23,7 @@ func (c *Chain) Get(key string, value interface{}) error {
 		if err == nil {
 			return nil
 		}
-		c.Logger().Printf("%s: Get cache error %v\n", cache.Type(), err)
+		c.Logger().Printf("%s: Get cache [ERROR] %v\n", cache.Type(), err)
 	}
 
 	return ErrKeyNotFound
@@ -40,7 +40,7 @@ func (c *Chain) Set(key string, value interface{}, expiration ...time.Duration) 
 
 			var err = cache.Set(key, value, expiration...)
 			if err != nil {
-				c.Logger().Printf("%s: Set cache key = %s error %v\n", cache.Type(), key, err)
+				c.Logger().Printf("%s: Set cache key = %s [ERROR] %v\n", cache.Type(), key, err)
 			}
 		}(&wg, cache)
 	}
@@ -60,7 +60,7 @@ func (c *Chain) Delete(key string) error {
 
 			var err = cache.Delete(key)
 			if err != nil {
-				c.Logger().Printf("%s: Delete cache key = %s error %v\n", cache.Type(), key, err)
+				c.Logger().Printf("%s: Delete cache key = %s [ERROR] %v\n", cache.Type(), key, err)
 			}
 		}(&wg, cache)
 	}
