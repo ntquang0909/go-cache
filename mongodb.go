@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"time"
 
+	jsoniter "github.com/json-iterator/go"
 	"github.com/patrickmn/go-cache"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -72,7 +73,7 @@ func (c *MongoDBStore) Get(key string, value interface{}) error {
 	}
 
 	var content = mongoItem{}
-	var ctx = context.Background()
+	var ctx = context.TODO()
 	var query = bson.M{"_id": key}
 	if err := c.getCollection().FindOne(ctx, query).Decode(&content); err != nil {
 		c.Logger().Printf("%s: Get key = %s [ERROR] %v\n", c.Type(), key, err)
@@ -86,7 +87,7 @@ func (c *MongoDBStore) Get(key string, value interface{}) error {
 		}
 	}
 
-	var err = decode([]byte(content.Value), value)
+	var err = jsoniter.UnmarshalFromString(content.Value, value)
 	if err != nil {
 		c.Logger().Printf("%s: Decode key = %s [ERROR] %v\n", c.Type(), key, err)
 		return err
@@ -107,7 +108,7 @@ func (c *MongoDBStore) Set(key string, value interface{}, expiration ...time.Dur
 		exp = expiration[0]
 	}
 
-	bytes, err := encode(value)
+	bytes, err := jsoniter.Marshal(value)
 	if err != nil {
 		c.Logger().Printf("%s: Encode key = %s value = %v [ERROR] %v\n", c.Type(), key, v.Interface(), err)
 		return err
@@ -122,7 +123,7 @@ func (c *MongoDBStore) Set(key string, value interface{}, expiration ...time.Dur
 		content.ExpiredAt = time.Now().Add(exp).Unix()
 	}
 
-	var ctx = context.Background()
+	var ctx = context.TODO()
 	var query = bson.M{"_id": key}
 	var update = bson.M{
 		"$set": content,
@@ -133,12 +134,16 @@ func (c *MongoDBStore) Set(key string, value interface{}, expiration ...time.Dur
 		return err
 	}
 
+	c.Logger().Printf("%s: UpdateOne key = %s result = %v\n", c.Type(), key, result)
+
 	if result.MatchedCount == 0 {
-		_, err := c.getCollection().InsertOne(ctx, &content)
+		result, err := c.getCollection().InsertOne(ctx, &content)
 		if err != nil {
 			c.Logger().Printf("%s: InsertOne key = %s value = %v [ERROR] %v\n", c.Type(), key, content, err)
 			return err
 		}
+
+		c.Logger().Printf("%s: InsertOne key = %s result = %v\n", c.Type(), key, result.InsertedID)
 
 	}
 
@@ -146,7 +151,7 @@ func (c *MongoDBStore) Set(key string, value interface{}, expiration ...time.Dur
 }
 
 func (c *MongoDBStore) Delete(key string) error {
-	var ctx = context.Background()
+	var ctx = context.TODO()
 	var query = bson.M{"_id": key}
 	if _, err := c.getCollection().DeleteOne(ctx, query); err != nil {
 		c.Logger().Printf("%s: DeleteOne key = %s [ERROR] %v\n", c.Type(), key, err)
