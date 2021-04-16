@@ -5,7 +5,6 @@ import (
 	"reflect"
 	"time"
 
-	jsoniter "github.com/json-iterator/go"
 	"github.com/patrickmn/go-cache"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -87,7 +86,7 @@ func (c *MongoDBStore) Get(key string, value interface{}) error {
 		}
 	}
 
-	var err = jsoniter.UnmarshalFromString(content.Value, value)
+	var err = decode([]byte(content.Value), value)
 	if err != nil {
 		c.Logger().Printf("%s: Decode key = %s [ERROR] %v\n", c.Type(), key, err)
 		return err
@@ -108,7 +107,7 @@ func (c *MongoDBStore) Set(key string, value interface{}, expiration ...time.Dur
 		exp = expiration[0]
 	}
 
-	bytes, err := jsoniter.Marshal(value)
+	bytes, err := encode(value)
 	if err != nil {
 		c.Logger().Printf("%s: Encode key = %s value = %v [ERROR] %v\n", c.Type(), key, v.Interface(), err)
 		return err
