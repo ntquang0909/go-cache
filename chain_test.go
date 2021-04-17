@@ -10,24 +10,25 @@ import (
 func TestChain(t *testing.T) {
 	var chain Cache = NewChain(
 		NewMongoDBStore(MongoDBStoreOptions{
-			DatabaseURI:  "mongodb://localhost:27017",
+			DatabaseURI:  "mongodb://localhost:27012",
 			DatabaseName: "test_cache",
 			Entity:       "caches",
 		}),
-		NewMemoryStore(MemoryStoreOptions{}),
-		NewRistrettoStore(RistrettoStoreOptionsDefault),
-		NewMemcacheStore(&MemcacheStoreOptions{
-			Servers: []string{"localhost:11211"},
-		}),
-		NewRedisStore(&RedisStoreOptions{
-			Address: "localhost:6379",
-		}),
+		// NewMemoryStore(MemoryStoreOptions{}),
+		// NewRistrettoStore(RistrettoStoreOptionsDefault),
+		// NewMemcacheStore(&MemcacheStoreOptions{
+		// 	Servers: []string{"localhost:11211"},
+		// }),
+		// NewRedisStore(&RedisStoreOptions{
+		// 	Address: "localhost:6379",
+		// }),
 	)
+	var err error
 
 	// Test string
 	var strKey = "test_str_key"
 	var strIn = "Hello world"
-	var err = chain.Set(strKey, &strIn)
+	err = chain.Set(strKey, &strIn)
 	assert.NoError(t, err)
 
 	var strOut string

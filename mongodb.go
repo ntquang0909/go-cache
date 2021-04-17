@@ -53,7 +53,9 @@ func NewMongoDBStore(opt MongoDBStoreOptions) *MongoDBStore {
 		store.entity = "caches"
 	}
 
-	err = client.Ping(context.TODO(), nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	err = client.Ping(ctx, nil)
 	if err != nil {
 		store.Logger().Printf("Connect to %s [ERROR] %v\n", err)
 	}
@@ -73,7 +75,8 @@ func (c *MongoDBStore) Get(key string, value interface{}) error {
 	}
 
 	var content = mongoItem{}
-	var ctx = context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	var query = bson.M{"_id": key}
 	if err := c.getCollection().FindOne(ctx, query).Decode(&content); err != nil {
 		c.Logger().Printf("%s: Get key = %s [ERROR] %v\n", c.Type(), key, err)
@@ -137,20 +140,20 @@ func (c *MongoDBStore) Set(key string, value interface{}, expiration ...time.Dur
 	}
 
 	if result.MatchedCount == 0 {
-		result, err := c.getCollection().InsertOne(ctx, &content)
+		_, err := c.getCollection().InsertOne(ctx, &content)
 		if err != nil {
 			c.Logger().Printf("%s: InsertOne key = %s value = %v [ERROR] %v\n", c.Type(), key, content, err)
 			return err
 		}
 
-		printJSON(result)
 	}
 
 	return nil
 }
 
 func (c *MongoDBStore) Delete(key string) error {
-	var ctx = context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	var query = bson.M{"_id": key}
 	if _, err := c.getCollection().DeleteOne(ctx, query); err != nil {
 		c.Logger().Printf("%s: DeleteOne key = %s [ERROR] %v\n", c.Type(), key, err)

@@ -119,16 +119,16 @@ func testStore(t *testing.T) {
 
 	assert.Equal(t, itemOut, itemIn)
 
-	// // Test bool
-	// var boolIn = true
-	// err = instance.Set(key, &boolIn)
-	// assert.NoError(t, err)
+	// Test bool
+	var boolIn = true
+	err = instance.Set(key, &boolIn)
+	assert.NoError(t, err)
 
-	// var boolOut bool
-	// err = instance.Get(key, &boolOut)
-	// assert.NoError(t, err)
+	var boolOut bool
+	err = instance.Get(key, &boolOut)
+	assert.NoError(t, err)
 
-	// assert.Equal(t, boolIn, boolOut)
+	assert.Equal(t, boolIn, boolOut)
 }
 func TestRedisCache(t *testing.T) {
 	instance = NewRedisStore(&RedisStoreOptions{
@@ -161,7 +161,7 @@ func TestMemcacheCache(t *testing.T) {
 
 func TestMongoDBCache(t *testing.T) {
 	instance = NewMongoDBStore(MongoDBStoreOptions{
-		DatabaseURI:  "mongodb+srv://ezie:1234qwer@cluster0.2w4ft.mongodb.net",
+		DatabaseURI:  "",
 		DatabaseName: "test_cache",
 		Entity:       "caches",
 	})
