@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 // RedisStore client
@@ -142,7 +143,7 @@ func (c *RedisStore) Get(key string, value interface{}) error {
 		return err
 	}
 
-	err = decode([]byte(val), value)
+	err = msgpack.Unmarshal([]byte(val), value)
 	if err != nil {
 		c.Logger().Printf("%s: Decode key = %s error %v\n", c.Type(), key, err)
 		return ErrUnmarshal
@@ -157,7 +158,7 @@ func (c *RedisStore) Set(key string, value interface{}, expiration ...time.Durat
 		return ErrMustBePointer
 	}
 
-	cacheEntry, err := encode(value)
+	cacheEntry, err := msgpack.Marshal(value)
 	if err != nil {
 		c.Logger().Printf("%s: Encode key = %s value = %v error %v\n", c.Type(), key, v.Interface(), err)
 		return ErrMarshal

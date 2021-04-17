@@ -2,6 +2,7 @@ package cache
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -87,7 +88,7 @@ func TestChain(t *testing.T) {
 	// Test bool
 	var boolKey = "test_bool_key"
 	var boolIn = true
-	err = chain.Set(boolKey, &boolIn)
+	err = chain.Set(boolKey, &boolIn, time.Hour)
 	assert.NoError(t, err)
 
 	var boolOut bool

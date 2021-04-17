@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/patrickmn/go-cache"
+	"github.com/vmihailenco/msgpack/v5"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -61,7 +62,7 @@ func NewMongoDBStore(opt MongoDBStoreOptions) *MongoDBStore {
 }
 
 func (c *MongoDBStore) getCollection() *mongo.Collection {
-	collection := c.client.Database(c.databaseName).Collection(c.entity)
+	collection := c.client.Database(c.databaseName).Collection(c.entity, &options.CollectionOptions{})
 	return collection
 }
 
@@ -86,7 +87,7 @@ func (c *MongoDBStore) Get(key string, value interface{}) error {
 		}
 	}
 
-	var err = decode([]byte(content.Value), value)
+	var err = msgpack.Unmarshal([]byte(content.Value), value)
 	if err != nil {
 		c.Logger().Printf("%s: Decode key = %s [ERROR] %v\n", c.Type(), key, err)
 		return err
@@ -107,7 +108,7 @@ func (c *MongoDBStore) Set(key string, value interface{}, expiration ...time.Dur
 		exp = expiration[0]
 	}
 
-	bytes, err := encode(value)
+	bytes, err := msgpack.Marshal(value)
 	if err != nil {
 		c.Logger().Printf("%s: Encode key = %s value = %v [ERROR] %v\n", c.Type(), key, v.Interface(), err)
 		return err
@@ -122,7 +123,9 @@ func (c *MongoDBStore) Set(key string, value interface{}, expiration ...time.Dur
 		content.ExpiredAt = time.Now().Add(exp).Unix()
 	}
 
-	var ctx = context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	var query = bson.M{"_id": key}
 	var update = bson.M{
 		"$set": content,
@@ -134,12 +137,13 @@ func (c *MongoDBStore) Set(key string, value interface{}, expiration ...time.Dur
 	}
 
 	if result.MatchedCount == 0 {
-		_, err := c.getCollection().InsertOne(ctx, &content)
+		result, err := c.getCollection().InsertOne(ctx, &content)
 		if err != nil {
 			c.Logger().Printf("%s: InsertOne key = %s value = %v [ERROR] %v\n", c.Type(), key, content, err)
 			return err
 		}
 
+		printJSON(result)
 	}
 
 	return nil

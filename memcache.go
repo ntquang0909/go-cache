@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/bradfitz/gomemcache/memcache"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 type MemcacheStore struct {
@@ -51,7 +52,7 @@ func (c *MemcacheStore) Get(key string, value interface{}) error {
 		return err
 	}
 
-	err = decode(val.Value, value)
+	err = msgpack.Unmarshal(val.Value, value)
 	if err != nil {
 		c.Logger().Printf("%s: Decode key = %s [ERROR] %v\n", c.Type(), key, err)
 		return ErrUnmarshal
@@ -66,7 +67,7 @@ func (c *MemcacheStore) Set(key string, value interface{}, expiration ...time.Du
 		return ErrMustBePointer
 	}
 
-	cacheEntry, err := encode(value)
+	cacheEntry, err := msgpack.Marshal(value)
 	if err != nil {
 		c.Logger().Printf("%s: Encode key = %s value = %v [ERROR] %v\n", c.Type(), key, v.Interface(), err)
 		return ErrMarshal
