@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/patrickmn/go-cache"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 type MemoryStore struct {
@@ -52,15 +53,16 @@ func (c *MemoryStore) Get(key string, value interface{}) error {
 		return ErrKeyNotFound
 	}
 
-	var i = reflect.ValueOf(val)
+	var err error
+	switch v := val.(type) {
+	case []byte:
+		err = msgpack.Unmarshal(v, value)
+	case string:
+		err = msgpack.Unmarshal([]byte(v), value)
 
-	if i.Kind() != reflect.Ptr {
-		i = toPtr(i)
 	}
 
-	o.Elem().Set(i.Elem())
-
-	return nil
+	return err
 }
 
 func (c *MemoryStore) Set(key string, value interface{}, expiration ...time.Duration) error {
@@ -75,7 +77,12 @@ func (c *MemoryStore) Set(key string, value interface{}, expiration ...time.Dura
 		exp = expiration[0]
 	}
 
-	c.client.Set(key, value, exp)
+	bytes, err := msgpack.Marshal(value)
+	if err != nil {
+		c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, value, err)
+		return err
+	}
+	c.client.Set(key, bytes, exp)
 	return nil
 }
 

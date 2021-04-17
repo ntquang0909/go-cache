@@ -14,14 +14,14 @@ func TestChain(t *testing.T) {
 			DatabaseName: "test_cache",
 			Entity:       "caches",
 		}),
-		// NewMemoryStore(MemoryStoreOptions{}),
-		// NewRistrettoStore(RistrettoStoreOptionsDefault),
-		// NewMemcacheStore(&MemcacheStoreOptions{
-		// 	Servers: []string{"localhost:11211"},
-		// }),
-		// NewRedisStore(&RedisStoreOptions{
-		// 	Address: "localhost:6379",
-		// }),
+		NewMemoryStore(MemoryStoreOptions{}),
+		NewRistrettoStore(RistrettoStoreOptionsDefault),
+		NewMemcacheStore(&MemcacheStoreOptions{
+			Servers: []string{"localhost:11211"},
+		}),
+		NewRedisStore(&RedisStoreOptions{
+			Address: "localhost:6379",
+		}),
 	)
 	var err error
 

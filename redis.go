@@ -158,7 +158,7 @@ func (c *RedisStore) Set(key string, value interface{}, expiration ...time.Durat
 		return ErrMustBePointer
 	}
 
-	cacheEntry, err := msgpack.Marshal(value)
+	bytes, err := msgpack.Marshal(value)
 	if err != nil {
 		c.Logger().Printf("%s: Encode key = %s value = %v error %v\n", c.Type(), key, v.Interface(), err)
 		return ErrMarshal
@@ -168,7 +168,7 @@ func (c *RedisStore) Set(key string, value interface{}, expiration ...time.Durat
 		exp = expiration[0]
 	}
 
-	err = c.client.Set(context.TODO(), key, cacheEntry, exp).Err()
+	err = c.client.Set(context.TODO(), key, bytes, exp).Err()
 	if err != nil {
 		c.Logger().Printf("%s: Set key = %s value = %v error %v\n", c.Type(), key, v.Interface(), err)
 		return err

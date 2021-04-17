@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/ristretto"
+	"github.com/vmihailenco/msgpack/v5"
 )
 
 type RistrettoStore struct {
@@ -57,20 +58,16 @@ func (c *RistrettoStore) Get(key string, value interface{}) error {
 		return ErrKeyNotFound
 	}
 
-	var i = reflect.ValueOf(val)
-	var o = reflect.ValueOf(value)
+	var err error
+	switch v := val.(type) {
+	case []byte:
+		err = msgpack.Unmarshal(v, value)
+	case string:
+		err = msgpack.Unmarshal([]byte(v), value)
 
-	if i.Kind() != reflect.Ptr {
-		i = toPtr(i)
 	}
 
-	if o.Kind() != reflect.Ptr {
-		o = toPtr(o)
-	}
-
-	o.Elem().Set(i.Elem())
-
-	return nil
+	return err
 }
 
 func (c *RistrettoStore) Set(key string, value interface{}, expiration ...time.Duration) error {
@@ -80,7 +77,13 @@ func (c *RistrettoStore) Set(key string, value interface{}, expiration ...time.D
 		return ErrMustBePointer
 	}
 
-	var success = c.client.Set(key, value, c.getCost())
+	bytes, err := msgpack.Marshal(value)
+	if err != nil {
+		c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, v.Interface(), ErrRistrettoWrite)
+		return err
+	}
+
+	var success = c.client.Set(key, string(bytes), c.getCost())
 	if !success {
 		c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, v.Interface(), ErrRistrettoWrite)
 		return ErrRistrettoWrite
