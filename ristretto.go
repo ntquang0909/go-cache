@@ -1,10 +1,10 @@
 package cache
 
 import (
-	"reflect"
 	"time"
 
 	"github.com/dgraph-io/ristretto"
+	"github.com/pkg/errors"
 	"github.com/vmihailenco/msgpack/v5"
 )
 
@@ -12,7 +12,6 @@ type RistrettoStore struct {
 	client            *ristretto.Cache
 	cost              int64
 	DefaultExpiration time.Duration
-	logger            Logger
 }
 
 type RistrettoStoreOptions struct {
@@ -20,7 +19,6 @@ type RistrettoStoreOptions struct {
 	MaxCost     int64
 	BufferItems int64
 	DefaultCost int64
-	Logger      Logger
 }
 
 var RistrettoStoreOptionsDefault = &RistrettoStoreOptions{
@@ -43,7 +41,6 @@ func NewRistrettoStore(options *RistrettoStoreOptions) *RistrettoStore {
 	return &RistrettoStore{
 		client: client,
 		cost:   options.DefaultCost,
-		logger: options.Logger,
 	}
 }
 
@@ -54,7 +51,6 @@ func (c *RistrettoStore) Get(key string, value interface{}) error {
 
 	val, found := c.client.Get(key)
 	if !found {
-		c.Logger().Printf("%s: Get key = %s [ERROR] %v\n", c.Type(), key, ErrKeyNotFound)
 		return ErrKeyNotFound
 	}
 
@@ -71,21 +67,17 @@ func (c *RistrettoStore) Get(key string, value interface{}) error {
 }
 
 func (c *RistrettoStore) Set(key string, value interface{}, expiration ...time.Duration) error {
-	var v = reflect.ValueOf(value)
-	if v.Kind() != reflect.Ptr {
-		c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, value, ErrMustBePointer)
+	if !isPtr(value) {
 		return ErrMustBePointer
 	}
 
 	bytes, err := msgpack.Marshal(value)
 	if err != nil {
-		c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, v.Interface(), ErrRistrettoWrite)
-		return err
+		return errors.Wrap(err, "Marshal error")
 	}
 
 	var success = c.client.Set(key, string(bytes), c.getCost())
 	if !success {
-		c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, v.Interface(), ErrRistrettoWrite)
 		return ErrRistrettoWrite
 	}
 	return nil
@@ -107,11 +99,4 @@ func (c *RistrettoStore) getCost() int64 {
 	}
 
 	return 8
-}
-
-func (c *RistrettoStore) Logger() Logger {
-	if c.logger != nil {
-		return c.logger
-	}
-	return DefaultLogger
 }

@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"reflect"
 	"time"
 
 	"github.com/bradfitz/gomemcache/memcache"
@@ -11,7 +10,6 @@ import (
 type MemcacheStore struct {
 	client            *memcache.Client
 	DefaultExpiration time.Duration
-	logger            Logger
 }
 
 type MemcacheStoreOptions struct {
@@ -19,7 +17,6 @@ type MemcacheStoreOptions struct {
 	DefaultExpiration time.Duration
 	MaxIdleConns      int
 	Timeout           time.Duration
-	Logger            Logger
 }
 
 func NewMemcacheStore(options *MemcacheStoreOptions) *MemcacheStore {
@@ -36,14 +33,12 @@ func NewMemcacheStore(options *MemcacheStoreOptions) *MemcacheStore {
 	}
 	return &MemcacheStore{
 		client:            client,
-		logger:            options.Logger,
 		DefaultExpiration: options.DefaultExpiration,
 	}
 }
 
 func (c *MemcacheStore) Get(key string, value interface{}) error {
 	if !isPtr(value) {
-		c.Logger().Printf("%s: Get key = %s value = %v [ERROR] %v\n", c.Type(), key, value, ErrMustBePointer)
 		return ErrMustBePointer
 	}
 
@@ -54,22 +49,18 @@ func (c *MemcacheStore) Get(key string, value interface{}) error {
 
 	err = msgpack.Unmarshal(val.Value, value)
 	if err != nil {
-		c.Logger().Printf("%s: Decode key = %s [ERROR] %v\n", c.Type(), key, err)
 		return ErrUnmarshal
 	}
 	return nil
 }
 
 func (c *MemcacheStore) Set(key string, value interface{}, expiration ...time.Duration) error {
-	var v = reflect.ValueOf(value)
-	if v.Kind() != reflect.Ptr {
-		c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, value, ErrMustBePointer)
+	if !isPtr(value) {
 		return ErrMustBePointer
 	}
 
 	cacheEntry, err := msgpack.Marshal(value)
 	if err != nil {
-		c.Logger().Printf("%s: Encode key = %s value = %v [ERROR] %v\n", c.Type(), key, v.Interface(), err)
 		return ErrMarshal
 	}
 	var exp = c.DefaultExpiration
@@ -84,7 +75,6 @@ func (c *MemcacheStore) Set(key string, value interface{}, expiration ...time.Du
 	}
 	err = c.client.Set(&item)
 	if err != nil {
-		c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, v.Interface(), err)
 		return err
 	}
 	return nil
@@ -93,7 +83,6 @@ func (c *MemcacheStore) Set(key string, value interface{}, expiration ...time.Du
 func (c *MemcacheStore) Delete(key string) error {
 	var err = c.client.Delete(key)
 	if err != nil {
-		c.Logger().Printf("%s: Delete key = %s [ERROR] %v\n", c.Type(), key, err)
 		return err
 	}
 	return nil
@@ -101,11 +90,4 @@ func (c *MemcacheStore) Delete(key string) error {
 
 func (c *MemcacheStore) Type() string {
 	return "memcache"
-}
-
-func (c *MemcacheStore) Logger() Logger {
-	if c.logger != nil {
-		return c.logger
-	}
-	return DefaultLogger
 }

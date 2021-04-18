@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"reflect"
 	"time"
 
 	"github.com/patrickmn/go-cache"
@@ -11,14 +10,12 @@ import (
 type MemoryStore struct {
 	client            *cache.Cache
 	DefaultExpiration time.Duration
-	logger            Logger
 }
 
 type MemoryStoreOptions struct {
 	DefaultExpiration time.Duration
 	DefaultCacheItems map[string]cache.Item
 	CleanupInterval   time.Duration
-	Logger            Logger
 }
 
 var MemoryStoreOptionsDefault = &MemoryStoreOptions{
@@ -36,20 +33,16 @@ func NewMemoryStore(options MemoryStoreOptions) *MemoryStore {
 	return &MemoryStore{
 		client:            client,
 		DefaultExpiration: options.DefaultExpiration,
-		logger:            options.Logger,
 	}
 }
 
 func (c *MemoryStore) Get(key string, value interface{}) error {
-	var o = reflect.ValueOf(value)
-	if o.Kind() != reflect.Ptr {
-		c.Logger().Printf("%s: Get key = %s value = %v [ERROR] %v\n", c.Type(), key, value, ErrMustBePointer)
+	if !isPtr(value) {
 		return ErrMustBePointer
 	}
 
 	val, found := c.client.Get(key)
 	if !found {
-		c.Logger().Printf("%s: Get key = %s [ERROR] %v\n", c.Type(), key, ErrKeyNotFound)
 		return ErrKeyNotFound
 	}
 
@@ -66,9 +59,7 @@ func (c *MemoryStore) Get(key string, value interface{}) error {
 }
 
 func (c *MemoryStore) Set(key string, value interface{}, expiration ...time.Duration) error {
-	var v = reflect.ValueOf(value)
-	if v.Kind() != reflect.Ptr {
-		c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, value, ErrMustBePointer)
+	if !isPtr(value) {
 		return ErrMustBePointer
 	}
 
@@ -79,7 +70,6 @@ func (c *MemoryStore) Set(key string, value interface{}, expiration ...time.Dura
 
 	bytes, err := msgpack.Marshal(value)
 	if err != nil {
-		c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, value, err)
 		return err
 	}
 	c.client.Set(key, bytes, exp)
@@ -93,11 +83,4 @@ func (c *MemoryStore) Delete(key string) error {
 
 func (c *MemoryStore) Type() string {
 	return "memory"
-}
-
-func (c *MemoryStore) Logger() Logger {
-	if c.logger != nil {
-		return c.logger
-	}
-	return DefaultLogger
 }

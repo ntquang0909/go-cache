@@ -23,7 +23,6 @@ func (c *Chain) Get(key string, value interface{}) error {
 		if err == nil {
 			return nil
 		}
-		c.Logger().Printf("%s: Get cache error %v\n", cache.Type(), err)
 	}
 
 	return ErrKeyNotFound
@@ -38,10 +37,7 @@ func (c *Chain) Set(key string, value interface{}, expiration ...time.Duration) 
 		go func(wg *sync.WaitGroup, cache Cache) {
 			defer wg.Done()
 
-			var err = cache.Set(key, value, expiration...)
-			if err != nil {
-				c.Logger().Printf("%s: Set cache key = %s error %v\n", cache.Type(), key, err)
-			}
+			cache.Set(key, value, expiration...)
 		}(&wg, cache)
 	}
 	wg.Wait()
@@ -58,10 +54,7 @@ func (c *Chain) Delete(key string) error {
 		go func(wg *sync.WaitGroup, cache Cache) {
 			defer wg.Done()
 
-			var err = cache.Delete(key)
-			if err != nil {
-				c.Logger().Printf("%s: Delete cache key = %s [ERROR] %v\n", cache.Type(), key, err)
-			}
+			cache.Delete(key)
 		}(&wg, cache)
 	}
 	wg.Wait()
@@ -71,8 +64,4 @@ func (c *Chain) Delete(key string) error {
 
 func (c *Chain) Type() string {
 	return "chain"
-}
-
-func (c *Chain) Logger() Logger {
-	return DefaultLogger
 }

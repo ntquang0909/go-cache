@@ -7,6 +7,7 @@ require (
 	github.com/dgraph-io/ristretto v0.0.3
 	github.com/go-redis/redis/v8 v8.8.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
+	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
 	github.com/vmihailenco/msgpack/v5 v5.3.1
 	go.mongodb.org/mongo-driver v1.5.1

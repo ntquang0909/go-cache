@@ -2,6 +2,7 @@ package cache
 
 import (
 	"context"
+	"log"
 	"reflect"
 	"time"
 
@@ -22,7 +23,6 @@ type MongoDBStore struct {
 	DefaultExpiration time.Duration
 	databaseName      string
 	entity            string
-	logger            Logger
 }
 
 type MongoDBStoreOptions struct {
@@ -32,7 +32,6 @@ type MongoDBStoreOptions struct {
 	DefaultExpiration time.Duration
 	DefaultCacheItems map[string]cache.Item
 	CleanupInterval   time.Duration
-	Logger            Logger
 }
 
 func NewMongoDBStore(opt MongoDBStoreOptions) *MongoDBStore {
@@ -46,7 +45,6 @@ func NewMongoDBStore(opt MongoDBStoreOptions) *MongoDBStore {
 		DefaultExpiration: opt.DefaultExpiration,
 		databaseName:      opt.DatabaseName,
 		entity:            opt.Entity,
-		logger:            opt.Logger,
 	}
 
 	if store.entity == "" {
@@ -57,7 +55,7 @@ func NewMongoDBStore(opt MongoDBStoreOptions) *MongoDBStore {
 	defer cancel()
 	err = client.Ping(ctx, nil)
 	if err != nil {
-		store.Logger().Printf("Connect to %s [ERROR] %v\n", err)
+		log.Fatalf("Connect to %s %v\n", opt.DatabaseURI, err)
 	}
 
 	return store
@@ -70,7 +68,6 @@ func (c *MongoDBStore) getCollection() *mongo.Collection {
 
 func (c *MongoDBStore) Get(key string, value interface{}) error {
 	if !isPtr(value) {
-		c.Logger().Printf("%s: Get key = %s value = %v error %v\n", c.Type(), key, value, ErrMustBePointer)
 		return ErrMustBePointer
 	}
 
@@ -79,20 +76,17 @@ func (c *MongoDBStore) Get(key string, value interface{}) error {
 	defer cancel()
 	var query = bson.M{"_id": key}
 	if err := c.getCollection().FindOne(ctx, query).Decode(&content); err != nil {
-		c.Logger().Printf("%s: Get key = %s [ERROR] %v\n", c.Type(), key, err)
 		return err
 	}
 
 	if content.ExpiredAt <= time.Now().Unix() {
 		if _, err := c.getCollection().DeleteOne(ctx, query); err != nil {
-			c.Logger().Printf("%s: Delete key = %s [ERROR] %v\n", c.Type(), key, err)
 			return err
 		}
 	}
 
 	var err = msgpack.Unmarshal([]byte(content.Value), value)
 	if err != nil {
-		c.Logger().Printf("%s: Decode key = %s [ERROR] %v\n", c.Type(), key, err)
 		return err
 	}
 
@@ -102,7 +96,6 @@ func (c *MongoDBStore) Get(key string, value interface{}) error {
 func (c *MongoDBStore) Set(key string, value interface{}, expiration ...time.Duration) error {
 	var v = reflect.ValueOf(value)
 	if v.Kind() != reflect.Ptr {
-		c.Logger().Printf("%s: Set key = %s value = %v [ERROR] %v\n", c.Type(), key, value, ErrMustBePointer)
 		return ErrMustBePointer
 	}
 
@@ -113,7 +106,6 @@ func (c *MongoDBStore) Set(key string, value interface{}, expiration ...time.Dur
 
 	bytes, err := msgpack.Marshal(value)
 	if err != nil {
-		c.Logger().Printf("%s: Encode key = %s value = %v [ERROR] %v\n", c.Type(), key, v.Interface(), err)
 		return err
 	}
 
@@ -135,14 +127,12 @@ func (c *MongoDBStore) Set(key string, value interface{}, expiration ...time.Dur
 	}
 	result, err := c.getCollection().UpdateOne(ctx, query, &update)
 	if err != nil {
-		c.Logger().Printf("%s: UpdateOne key = %s value = %v [ERROR] %v\n", c.Type(), key, content, err)
 		return err
 	}
 
 	if result.MatchedCount == 0 {
 		_, err := c.getCollection().InsertOne(ctx, &content)
 		if err != nil {
-			c.Logger().Printf("%s: InsertOne key = %s value = %v [ERROR] %v\n", c.Type(), key, content, err)
 			return err
 		}
 
@@ -156,7 +146,6 @@ func (c *MongoDBStore) Delete(key string) error {
 	defer cancel()
 	var query = bson.M{"_id": key}
 	if _, err := c.getCollection().DeleteOne(ctx, query); err != nil {
-		c.Logger().Printf("%s: DeleteOne key = %s [ERROR] %v\n", c.Type(), key, err)
 		return err
 	}
 	return nil
@@ -164,11 +153,4 @@ func (c *MongoDBStore) Delete(key string) error {
 
 func (c *MongoDBStore) Type() string {
 	return "mongodb"
-}
-
-func (c *MongoDBStore) Logger() Logger {
-	if c.logger != nil {
-		return c.logger
-	}
-	return DefaultLogger
 }

@@ -33,10 +33,4 @@ type Cache interface {
 	Delete(key string) error
 
 	Type() string
-
-	Logger() Logger
-}
-
-type Logger interface {
-	Printf(format string, values ...interface{})
 }
